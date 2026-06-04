@@ -34,7 +34,7 @@ npm run dev       # watch mode (tsc + node --watch)
 {
   "mcpServers": {
     "yuntrack": {
-      "command": "tsx",
+      "command": "/absolute/path/to/mcp-yuntrack/node_modules/.bin/tsx",
       "args": ["/absolute/path/to/mcp-yuntrack/src/index.ts"]
     }
   }
@@ -50,7 +50,7 @@ npm run dev       # watch mode (tsc + node --watch)
 Run once from any directory:
 
 ```bash
-claude mcp add yuntrack tsx /absolute/path/to/mcp-yuntrack/src/index.ts
+claude mcp add yuntrack /absolute/path/to/mcp-yuntrack/node_modules/.bin/tsx /absolute/path/to/mcp-yuntrack/src/index.ts
 ```
 
 Restart Claude Code. The tool is available in every project.
@@ -71,7 +71,7 @@ Add a `.claude/mcp.json` (or `mcp.json`) in your project root:
 {
   "mcpServers": {
     "yuntrack": {
-      "command": "tsx",
+      "command": "/absolute/path/to/mcp-yuntrack/node_modules/.bin/tsx",
       "args": ["/absolute/path/to/mcp-yuntrack/src/index.ts"]
     }
   }
