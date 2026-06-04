@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(npm ls *)",
+      "Read(//Users/oscar/Library/Application Support/Claude/**)"
+    ],
+    "additionalDirectories": [
+      "/Users/oscar/Library/Application Support/Claude"
+    ]
+  }
+}
