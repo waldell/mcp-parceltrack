@@ -4,9 +4,15 @@ MCP server (stdio transport) for tracking parcels via [YunTrack](https://www.yun
 
 ## How it works
 
-The tracker navigates to the YunTrack parcel page and intercepts the POST response from
-`services.yuntrack.com/Track/Query` using Playwright's `waitForResponse`. The raw JSON
-is returned as-is — no field interpretation.
+The tracker calls `services.yuntrack.com/Track/Query` directly using a signed POST
+request (HMAC-SHA256, key found in the page bundle). Because Alibaba Cloud WAF blocks
+requests that lack Chrome's TLS fingerprint, a headless Chromium browser is kept alive
+in the background and all API calls are made via `page.evaluate()` — the browser's
+own `fetch()` — rather than loading the full tracking page each time. This keeps
+response times around 400 ms per query.
+
+A shared browser context is reused across all calls so warm-up only happens once.
+The raw JSON from the API is returned as-is — no field interpretation.
 
 ## Build
 
@@ -89,7 +95,7 @@ This makes the server available to everyone who opens the project in Claude Code
 { "trackingId": "UJ123456789SE" }
 ```
 
-**Batch (up to any count, 3 concurrent pages):**
+**Batch (up to 100 IDs per call, sent in one request):**
 ```json
 { "trackingIds": ["UJ123456789SE", "BCM987654321SE"] }
 ```

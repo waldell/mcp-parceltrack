@@ -72,7 +72,7 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
 
   try {
     if (parsed.trackingIds && parsed.trackingIds.length > 0) {
-      const results = await trackParcels(parsed.trackingIds, 3);
+      const results = await trackParcels(parsed.trackingIds);
       return {
         content: [{ type: 'text', text: JSON.stringify(results, null, 2) }],
       };

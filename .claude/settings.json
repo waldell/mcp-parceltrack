@@ -4,10 +4,10 @@
       "Bash(npm install *)",
       "Bash(npm run *)",
       "Bash(npm ls *)",
-      "Read(//Users/oscar/Library/Application Support/Claude/**)"
-    ],
-    "additionalDirectories": [
-      "/Users/oscar/Library/Application Support/Claude"
+      "Bash(npx tsx *)",
+      "Bash(npx playwright *)",
+      "Bash(curl -s \"https://www.yuntrack.com/*\")",
+      "Read(/tmp/**)"
     ]
   }
 }

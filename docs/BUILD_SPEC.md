@@ -77,3 +77,34 @@ YunTrack may sign the requests or require page-generated tokens, so browser
 interception is the robust default. If feasible, check whether the Query request
 can be replicated directly with the captured payload, and fall back to the browser
 otherwise.
+
+---
+
+## Implementation notes (post-build investigation)
+
+### Signing algorithm
+The request body is signed with **HMAC-SHA256**:
+- Message: `` `Timestamp=${Date.now()}&NumberList=${JSON.stringify(ids)}` ``
+- Key: `f3c42837e3b46431ddf5d7db7d67017d` (hardcoded in the page JS bundle)
+- Result encoded as lowercase hex → `Signature` field
+
+### Direct fetch is NOT possible (WAF TLS fingerprinting)
+Attempts to call `services.yuntrack.com/Track/Query` directly from Node.js `fetch`
+or curl are blocked with HTTP 405 by Alibaba Cloud WAF regardless of headers or
+cookies. The WAF performs TLS fingerprint (JA3/JA4) checks and only permits
+connections that present Chrome's TLS handshake — which only real Chromium provides.
+
+### Optimised approach (current implementation)
+Instead of a full page navigation per request, the implementation uses a single
+persistent `Browser`/`BrowserContext`/`Page` and calls the API via
+`page.evaluate(() => fetch(...), { credentials: 'include' })`. This:
+- Reuses Chrome's TLS connection to bypass the WAF
+- Sends the `acw_tc` WAF session cookie (set automatically by the CORS OPTIONS
+  preflight on first call, valid ~30 min, auto-refreshed on expiry)
+- Avoids loading the 3 MB Vue app bundle on every request
+
+Typical latencies: ~2 s cold start, ~400 ms per warm query.
+
+### Batch size
+`NumberList` accepts at least 100 IDs in a single POST. All IDs in a
+`trackParcels` call are sent in one request (chunked at 100 if needed).
