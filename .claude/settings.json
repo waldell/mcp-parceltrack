@@ -7,7 +7,20 @@
       "Bash(npx tsx *)",
       "Bash(npx playwright *)",
       "Bash(curl -s \"https://www.yuntrack.com/*\")",
-      "Read(/tmp/**)"
+      "Read(/tmp/**)",
+      "Bash(claude mcp *)",
+      "Read(//Users/oscar/Library/Application Support/Claude/**)",
+      "Read(//Users/oscar/dev/github-waldell/**)",
+      "Bash(cp \"/Users/oscar/Library/Application Support/Claude/claude_desktop_config.json\" \"/Users/oscar/Library/Application Support/Claude/claude_desktop_config.json.bak-20260907\")",
+      "Read(//private/tmp/**)",
+      "Bash(python3 -m json.tool \"/Users/oscar/Library/Application Support/Claude/claude_desktop_config.json\")",
+      "Bash(node_modules/.bin/tsx src/index.ts)",
+      "WebFetch(domain:claude.ai)",
+      "Bash(ls -la \"/Users/oscar/Library/Application Support/Claude/\" 2>&1 | head -30)",
+      "Bash(cd \"/Users/oscar/Library/Application Support/Claude\" && grep -rl \"0252adee\" IndexedDB \"Local Storage\" \"Session Storage\" 2>/dev/null; echo \"--- träffar ovan \\(tomt = ingen\\) ---\"; du -sh IndexedDB \"Local Storage\" 2>/dev/null)"
+    ],
+    "additionalDirectories": [
+      "/Users/oscar/Library/Application Support/Claude"
     ]
   }
 }

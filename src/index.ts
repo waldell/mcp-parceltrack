@@ -13,7 +13,7 @@ const InputSchema = z.object({
 });
 
 const server = new Server(
-  { name: 'mcp-yuntrack', version: '1.0.0' },
+  { name: 'mcp-parceltrack', version: '1.0.0' },
   { capabilities: { tools: {} } },
 );
 

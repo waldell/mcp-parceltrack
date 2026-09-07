@@ -1,6 +1,6 @@
-# YunTrack MCP
+# mcp-parceltrack
 
-MCP server (stdio transport) that tracks parcels via YunTrack.
+MCP server (stdio transport) for parcel tracking. Currently supports YunTrack.
 
 ## Stack
 - Node.js LTS + TypeScript (strict), ESM

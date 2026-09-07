@@ -1,6 +1,7 @@
-# mcp-yuntrack
+# mcp-parceltrack
 
-MCP server (stdio transport) for tracking parcels via [YunTrack](https://www.yuntrack.com).
+MCP server (stdio transport) for parcel tracking. Currently supports
+[YunTrack](https://www.yuntrack.com).
 
 ## How it works
 
@@ -39,9 +40,9 @@ npm run dev       # watch mode (tsc + node --watch)
 ```json
 {
   "mcpServers": {
-    "yuntrack": {
-      "command": "/absolute/path/to/mcp-yuntrack/node_modules/.bin/tsx",
-      "args": ["/absolute/path/to/mcp-yuntrack/src/index.ts"]
+    "parceltrack": {
+      "command": "/absolute/path/to/mcp-parceltrack/node_modules/.bin/tsx",
+      "args": ["/absolute/path/to/mcp-parceltrack/src/index.ts"]
     }
   }
 }
@@ -56,7 +57,7 @@ npm run dev       # watch mode (tsc + node --watch)
 Run once from any directory:
 
 ```bash
-claude mcp add yuntrack /absolute/path/to/mcp-yuntrack/node_modules/.bin/tsx /absolute/path/to/mcp-yuntrack/src/index.ts
+claude mcp add parceltrack /absolute/path/to/mcp-parceltrack/node_modules/.bin/tsx /absolute/path/to/mcp-parceltrack/src/index.ts
 ```
 
 Restart Claude Code. The tool is available in every project.
@@ -76,9 +77,9 @@ Add a `.claude/mcp.json` (or `mcp.json`) in your project root:
 ```json
 {
   "mcpServers": {
-    "yuntrack": {
-      "command": "/absolute/path/to/mcp-yuntrack/node_modules/.bin/tsx",
-      "args": ["/absolute/path/to/mcp-yuntrack/src/index.ts"]
+    "parceltrack": {
+      "command": "/absolute/path/to/mcp-parceltrack/node_modules/.bin/tsx",
+      "args": ["/absolute/path/to/mcp-parceltrack/src/index.ts"]
     }
   }
 }

@@ -1,4 +1,4 @@
-# Build Spec: YunTrack Parcel Tracking MCP Server
+# Build Spec: mcp-parceltrack — Parcel Tracking MCP Server
 
 Build a complete MCP server (Model Context Protocol) in **Node.js + TypeScript**
 that exposes a tool for tracking parcels via YunTrack.

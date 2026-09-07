@@ -1,7 +1,7 @@
 {
-  "name": "mcp-yuntrack",
+  "name": "mcp-parceltrack",
   "version": "1.0.0",
-  "description": "MCP server for tracking parcels via YunTrack",
+  "description": "MCP server for parcel tracking. Currently supports YunTrack.",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
