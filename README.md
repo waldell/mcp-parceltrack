@@ -7,7 +7,7 @@ You do not pick a carrier — the server works it out from the tracking number.
 ## How it works
 
 Each carrier is a provider behind a common interface, and a router chooses per
-tracking number: a recognised prefix (`4PX…`, or `UJ`/`BCM`/`0099`) goes straight to
+tracking number: a recognised prefix (`4PX…`, or `YT`/`UJ`/`BCM`/`0099`) goes straight to
 its carrier, while an unrecognised one is probed cheapest-carrier-first.
 
 The two carriers could hardly be less alike. 4PX is a plain open endpoint (~200 ms,
@@ -149,3 +149,10 @@ npm run check:routing
 
 Hits both carriers live and asserts the routing rules (correct carrier per prefix,
 input order preserved, no browser launched for a 4PX-only lookup).
+
+The structural checks run on throwaway numbers. To also prove that a real parcel
+comes back as `found`, pass tracking numbers of your own — none are committed:
+
+```bash
+PARCELTRACK_TEST_4PX=4PX…CN PARCELTRACK_TEST_YUNTRACK=YT… npm run check:routing
+```

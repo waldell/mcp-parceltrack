@@ -14,7 +14,7 @@ Each carrier lives in `src/providers/<name>.ts` behind the `Provider` interface 
 `src/providers/types.ts`. `src/router.ts` picks the provider per tracking number —
 callers never say which carrier to use.
 
-- Confident prefix match (`4PX…` → 4PX, `UJ`/`BCM`/`0099` → YunTrack) goes straight
+- Confident prefix match (`4PX…` → 4PX, `YT`/`UJ`/`BCM`/`0099` → YunTrack) goes straight
   to that provider. A confident match that comes back empty is NOT retried
   elsewhere; the parcel is simply unknown there.
 - An unrecognised format is probed cheapest-provider-first (`Provider.cost`), and
@@ -23,8 +23,11 @@ callers never say which carrier to use.
   wait for Chromium. Anything added to the router has to preserve that.
 - **`found` is not the same as `result`.** Both carriers answer for numbers they
   have never heard of — 4PX with an empty `status: 7` stub, YunTrack by echoing the
-  number back with zeroed fields — so a payload is no proof the parcel exists.
-  Providers report `found` separately and still return the raw payload.
+  number back with `Status: 0` and an empty `TrackEventDetails` — so a payload is no
+  proof the parcel exists. A known and an unknown YunTrack parcel do not even share
+  a `TrackInfo` shape; the fields present differ almost entirely, so detection keys
+  off the two both have. Providers report `found` separately and still return the
+  raw payload.
 
 Tool results are always one entry per tracking number, in the order given:
 `{ trackingId, provider, found, result, error? }`. `result` is the carrier's raw
@@ -73,7 +76,9 @@ request, fanned out with bounded concurrency.
 - First-time setup: `npx playwright install chromium`
 
 ## Carrier codes (YunExpress)
-UJ → PostNord · BCM → Citymail · 0099 → Earlybird
+`YT` is YunExpress's own waybill format. UJ → PostNord · BCM → Citymail ·
+0099 → Earlybird are last-mile numbers YunTrack also resolves — looking up a YT
+number returns its UJ number as `TrackInfo.TrackingNumber`.
 
 ## Communication
 Write all code, comments and commit messages in English. When explaining things

@@ -118,7 +118,7 @@ const BATCH_SIZE = 100;
 interface ResultItem {
   Id: string;
   Status?: number;
-  TrackInfo?: { TrackEventCount?: number };
+  TrackInfo?: { TrackEventDetails?: unknown[] };
   [key: string]: unknown;
 }
 
@@ -128,11 +128,16 @@ interface QueryResponse {
 
 /**
  * YunTrack answers for any waybill number, echoing an unknown one back with
- * Status 0 and every field zeroed. Treat "no track events at all" as no record,
- * while still returning the payload it sent.
+ * Status 0 and an empty TrackEventDetails. A known parcel and an unknown one do
+ * not even share a TrackInfo shape — the fields present differ almost entirely —
+ * so key off the two things both shapes do have.
+ *
+ * Status alone would miss nothing observed so far, but a parcel that is
+ * registered without events yet still reports a non-zero Status, so accept
+ * either signal.
  */
 function isFound(item: ResultItem): boolean {
-  return (item.TrackInfo?.TrackEventCount ?? 0) > 0;
+  return (item.TrackInfo?.TrackEventDetails?.length ?? 0) > 0 || (item.Status ?? 0) > 0;
 }
 
 export const yunTrack: Provider = {
@@ -142,8 +147,10 @@ export const yunTrack: Provider = {
   cost: 10,
 
   matches(trackingId) {
-    // YunExpress carrier prefixes: UJ = PostNord, BCM = Citymail, 0099 = Earlybird.
-    return /^(UJ|BCM|0099)/i.test(trackingId.trim());
+    // YT is YunExpress's own waybill format. UJ, BCM and 0099 are last-mile
+    // carrier numbers (PostNord, Citymail, Earlybird) that YunTrack also
+    // resolves — a YT lookup returns its UJ number as TrackingNumber.
+    return /^(YT|UJ|BCM|0099)/i.test(trackingId.trim());
   },
 
   async track(trackingIds) {
