@@ -17,7 +17,11 @@
       "Bash(node_modules/.bin/tsx src/index.ts)",
       "WebFetch(domain:claude.ai)",
       "Bash(ls -la \"/Users/oscar/Library/Application Support/Claude/\" 2>&1 | head -30)",
-      "Bash(cd \"/Users/oscar/Library/Application Support/Claude\" && grep -rl \"0252adee\" IndexedDB \"Local Storage\" \"Session Storage\" 2>/dev/null; echo \"--- träffar ovan \\(tomt = ingen\\) ---\"; du -sh IndexedDB \"Local Storage\" 2>/dev/null)"
+      "Bash(cd \"/Users/oscar/Library/Application Support/Claude\" && grep -rl \"0252adee\" IndexedDB \"Local Storage\" \"Session Storage\" 2>/dev/null; echo \"--- träffar ovan \\(tomt = ingen\\) ---\"; du -sh IndexedDB \"Local Storage\" 2>/dev/null)",
+      "Bash(curl -s -o /tmp/4px.json -w \"HTTP %{http_code}  %{time_total}s\\\\n\" -X POST https://track.4px.com/track/v2/front/listTrackV3 -H 'Content-Type: application/json' -d '{\"queryCodes\":[\"4PX3003133457168CN\"]}' --max-time 20; echo \"--- svar \\(början\\) ---\"; head -c 600 /tmp/4px.json)",
+      "Read(//tmp/**)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('result:',d['result'],'| message:',d['message']\\); print\\('antal i data:',len\\(d['data']\\)\\); print\\('queryCodes i svar:',[s['queryCode'] for s in d['data']]\\)\")",
+      "Bash(python3 -c ' *)"
     ],
     "additionalDirectories": [
       "/Users/oscar/Library/Application Support/Claude"
