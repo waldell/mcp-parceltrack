@@ -1,6 +1,6 @@
 # mcp-parceltrack
 
-MCP server (stdio transport) for parcel tracking. Currently supports YunTrack.
+MCP server (stdio transport) for parcel tracking via YunTrack and 4PX.
 
 ## Stack
 - Node.js LTS + TypeScript (strict), ESM
@@ -9,7 +9,28 @@ MCP server (stdio transport) for parcel tracking. Currently supports YunTrack.
 
 ## Architecture — IMPORTANT
 
-### API
+### Providers and routing
+Each carrier lives in `src/providers/<name>.ts` behind the `Provider` interface in
+`src/providers/types.ts`. `src/router.ts` picks the provider per tracking number —
+callers never say which carrier to use.
+
+- Confident prefix match (`4PX…` → 4PX, `UJ`/`BCM`/`0099` → YunTrack) goes straight
+  to that provider. A confident match that comes back empty is NOT retried
+  elsewhere; the parcel is simply unknown there.
+- An unrecognised format is probed cheapest-provider-first (`Provider.cost`), and
+  each round only carries forward the numbers still unaccounted for.
+- **Only YunTrack may touch the browser.** A 4PX-only call must never launch or
+  wait for Chromium. Anything added to the router has to preserve that.
+- **`found` is not the same as `result`.** Both carriers answer for numbers they
+  have never heard of — 4PX with an empty `status: 7` stub, YunTrack by echoing the
+  number back with zeroed fields — so a payload is no proof the parcel exists.
+  Providers report `found` separately and still return the raw payload.
+
+Tool results are always one entry per tracking number, in the order given:
+`{ trackingId, provider, found, result, error? }`. `result` is the carrier's raw
+JSON, untouched.
+
+### YunTrack API
 The tracking data comes from a signed POST to `services.yuntrack.com/Track/Query`.
 Do NOT scrape the DOM — return the raw JSON as-is.
 
@@ -22,9 +43,10 @@ Signature = `HMAC-SHA256("Timestamp=<ts>&NumberList=<JSON.stringify(ids)>", "f3c
 
 The API accepts up to 100 IDs per request in `NumberList`.
 
-### Why we still need Playwright
+### Why YunTrack still needs Playwright
 Direct `fetch` from Node.js is blocked by Alibaba Cloud WAF TLS-fingerprint checks.
-Only requests from a real Chromium TLS handshake pass through.
+Only requests from a real Chromium TLS handshake pass through. This applies to
+YunTrack alone — 4PX has no WAF and goes over plain `fetch`.
 
 ### How requests are made (optimised)
 1. One shared `Browser` + `BrowserContext` + `Page` is kept alive.
@@ -35,8 +57,14 @@ Only requests from a real Chromium TLS handshake pass through.
    with `credentials: 'include'` — no full page navigation required (~400 ms/call).
 4. On HTTP 405 (WAF cookie expired) the context is re-warmed automatically.
 
+### 4PX API
+Open endpoint, no browser, no signature — see @docs/4PX_API.md. Note it processes
+only the FIRST entry of `queryCodes`, so there is no batching: one parcel per
+request, fanned out with bounded concurrency.
+
 ## Conventions
 - One persistent Browser/Context/Page — do NOT recreate per request.
+- A new carrier is a new file in `src/providers/` plus an entry in `src/router.ts`.
 - Shut the browser down gracefully on SIGINT/SIGTERM.
 - Never add your own interpretation of the API fields unless explicitly asked.
 

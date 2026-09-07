@@ -1,14 +1,15 @@
 {
   "name": "mcp-parceltrack",
   "version": "1.0.0",
-  "description": "MCP server for parcel tracking. Currently supports YunTrack.",
+  "description": "MCP server for parcel tracking via YunTrack and 4PX",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
     "start": "tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
-    "inspect": "npx @modelcontextprotocol/inspector tsx src/index.ts"
+    "inspect": "npx @modelcontextprotocol/inspector tsx src/index.ts",
+    "check:routing": "tsx scripts/routing-check.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",

@@ -1,5 +1,6 @@
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright';
 import { createHmac } from 'crypto';
+import type { Provider, TrackResult } from './types.js';
 
 const SIGN_KEY = 'f3c42837e3b46431ddf5d7db7d67017d';
 const API_URL = 'https://services.yuntrack.com/Track/Query';
@@ -111,47 +112,75 @@ async function withReauth<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
-export async function trackParcel(trackingId: string): Promise<unknown> {
-  return withReauth(() => fetchViaPage([trackingId]));
-}
-
 // The API accepts up to 100 IDs per NumberList in a single request.
 const BATCH_SIZE = 100;
 
-export async function trackParcels(
-  trackingIds: string[],
-): Promise<Array<{ trackingId: string; result: unknown; error?: string }>> {
-  const results: Array<{ trackingId: string; result: unknown; error?: string }> = [];
+interface ResultItem {
+  Id: string;
+  Status?: number;
+  TrackInfo?: { TrackEventCount?: number };
+  [key: string]: unknown;
+}
 
-  for (let i = 0; i < trackingIds.length; i += BATCH_SIZE) {
-    const chunk = trackingIds.slice(i, i + BATCH_SIZE);
-    try {
-      const data = await withReauth(() => fetchViaPage(chunk)) as { ResultList?: Array<{ Id: string } & Record<string, unknown>> };
-      const list = data?.ResultList ?? [];
-      for (const item of list) {
-        results.push({ trackingId: item.Id, result: item });
-      }
-      // Any IDs missing from the response (shouldn't happen, but be safe)
-      const returned = new Set(list.map(r => r.Id));
-      for (const id of chunk) {
-        if (!returned.has(id)) results.push({ trackingId: id, result: null, error: 'No result returned' });
-      }
-    } catch (err) {
-      for (const id of chunk) {
-        results.push({ trackingId: id, result: null, error: err instanceof Error ? err.message : String(err) });
+interface QueryResponse {
+  ResultList?: ResultItem[];
+}
+
+/**
+ * YunTrack answers for any waybill number, echoing an unknown one back with
+ * Status 0 and every field zeroed. Treat "no track events at all" as no record,
+ * while still returning the payload it sent.
+ */
+function isFound(item: ResultItem): boolean {
+  return (item.TrackInfo?.TrackEventCount ?? 0) > 0;
+}
+
+export const yunTrack: Provider = {
+  name: 'yuntrack',
+  // Needs a live Chromium to clear the WAF's TLS fingerprint check, so a cold
+  // call pays a browser launch. Only query it when there is reason to.
+  cost: 10,
+
+  matches(trackingId) {
+    // YunExpress carrier prefixes: UJ = PostNord, BCM = Citymail, 0099 = Earlybird.
+    return /^(UJ|BCM|0099)/i.test(trackingId.trim());
+  },
+
+  async track(trackingIds) {
+    const results: TrackResult[] = [];
+
+    for (let i = 0; i < trackingIds.length; i += BATCH_SIZE) {
+      const chunk = trackingIds.slice(i, i + BATCH_SIZE);
+      try {
+        const data = (await withReauth(() => fetchViaPage(chunk))) as QueryResponse;
+        const byId = new Map((data?.ResultList ?? []).map((item) => [item.Id, item]));
+        for (const id of chunk) {
+          const item = byId.get(id) ?? null;
+          results.push({
+            trackingId: id,
+            provider: 'yuntrack',
+            found: item !== null && isFound(item),
+            result: item,
+          });
+        }
+      } catch (err) {
+        const error = err instanceof Error ? err.message : String(err);
+        for (const id of chunk) {
+          results.push({ trackingId: id, provider: 'yuntrack', found: false, result: null, error });
+        }
       }
     }
-  }
 
-  return results;
-}
+    return results;
+  },
 
-export async function closeBrowser(): Promise<void> {
-  ready = false;
-  if (browser) {
-    await browser.close();
-    browser = null;
-    ctx = null;
-    page = null;
-  }
-}
+  async close() {
+    ready = false;
+    if (browser) {
+      await browser.close();
+      browser = null;
+      ctx = null;
+      page = null;
+    }
+  },
+};

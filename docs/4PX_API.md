@@ -94,12 +94,30 @@ Top level: `{ result: number, message: string, data: Shipment[] }`.
 
 ## Behaviour
 
-- `queryCodes` is an array → batch several parcels per request.
-- **Unknown codes are silently dropped from `data`** — no error, no placeholder
-  (verified: two codes in, one known, one bogus → `data.length === 1`). Always map
-  results back per `queryCode` and represent a miss explicitly.
-- Batch size limit is untested; YunTrack's documented 100 is a reasonable starting
-  chunk size.
+### There is no batching — only the first code is processed
+
+`queryCodes` is an array, but the endpoint answers for its **first element only**
+and silently ignores the rest. Verified 2026-09-07:
+
+| Request | `data` returned |
+|---|---|
+| `["4PX3003133457168CN"]` | the real parcel |
+| `["4PX3003133457168CN", "BOGUS123456789XX"]` | the real parcel only |
+| `["BOGUS123456789XX", "4PX3003133457168CN"]` | **the bogus code only** |
+| `["ZZ999999999XX", "BOGUS…", "4PX…"]` | the `ZZ` code only |
+
+So one parcel means one request. Fan out with bounded concurrency instead of
+batching, and never assume a second code in the array was looked at.
+
+This is easy to get wrong: querying a real code with a bogus one appended *looks*
+like "unknown codes are dropped", when in fact the second code was never read.
+
+### Unknown codes are answered, not dropped
+
+An unrecognised code comes back as a real entry with `status: 7`,
+`serverCode: null` and `tracks: []`. It is not an error and not an omission — so
+`result: 1` and a non-empty `data` prove nothing about whether the parcel exists.
+Decide "not found" structurally: no `serverCode` and no `tracks`.
 
 ## Caveats
 

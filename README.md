@@ -1,19 +1,31 @@
 # mcp-parceltrack
 
-MCP server (stdio transport) for parcel tracking. Currently supports
-[YunTrack](https://www.yuntrack.com).
+MCP server (stdio transport) for parcel tracking, supporting
+[YunTrack](https://www.yuntrack.com) (YunExpress) and [4PX](https://track.4px.com).
+You do not pick a carrier — the server works it out from the tracking number.
 
 ## How it works
 
-The tracker calls `services.yuntrack.com/Track/Query` directly using a signed POST
-request (HMAC-SHA256, key found in the page bundle). Because Alibaba Cloud WAF blocks
+Each carrier is a provider behind a common interface, and a router chooses per
+tracking number: a recognised prefix (`4PX…`, or `UJ`/`BCM`/`0099`) goes straight to
+its carrier, while an unrecognised one is probed cheapest-carrier-first.
+
+The two carriers could hardly be less alike. 4PX is a plain open endpoint (~200 ms,
+no browser, no signature) — but it only ever reads the first entry of its
+`queryCodes` array, so it cannot batch: each parcel is its own request, fanned out
+a few at a time.
+
+YunTrack is the opposite. It batches 100 numbers per call, but its provider has to
+call `services.yuntrack.com/Track/Query` with a signed POST request (HMAC-SHA256,
+key found in the page bundle). Because Alibaba Cloud WAF blocks
 requests that lack Chrome's TLS fingerprint, a headless Chromium browser is kept alive
 in the background and all API calls are made via `page.evaluate()` — the browser's
 own `fetch()` — rather than loading the full tracking page each time. This keeps
 response times around 400 ms per query.
 
-A shared browser context is reused across all calls so warm-up only happens once.
-The raw JSON from the API is returned as-is — no field interpretation.
+A shared browser context is reused across all calls so warm-up only happens once,
+and it is started lazily — a 4PX-only lookup never launches Chromium at all.
+The raw JSON from each API is returned as-is — no field interpretation.
 
 ## Build
 
@@ -96,9 +108,44 @@ This makes the server available to everyone who opens the project in Claude Code
 { "trackingId": "UJ123456789SE" }
 ```
 
-**Batch (up to 100 IDs per call, sent in one request):**
+**Batch — carriers may be mixed freely:**
 ```json
-{ "trackingIds": ["UJ123456789SE", "BCM987654321SE"] }
+{ "trackingIds": ["UJ123456789SE", "4PX3003133457168CN"] }
 ```
 
-Returns the raw JSON from the YunTrack Query API.
+**Forcing a carrier** (rarely needed; only when auto-detection is known to be wrong):
+```json
+{ "trackingId": "1234567890", "provider": "4px" }
+```
+
+### Result
+
+One entry per tracking number, in the order you gave them:
+
+```json
+[
+  {
+    "trackingId": "4PX3003133457168CN",
+    "provider": "4px",
+    "found": true,
+    "result": { "queryCode": "4PX3003133457168CN", "tracks": [ ... ] }
+  }
+]
+```
+
+- `provider` — which carrier answered.
+- `found` — whether that carrier actually has a record of the parcel. Check this,
+  not `result`: both carriers reply to numbers they have never heard of (4PX with an
+  empty stub, YunTrack by echoing the number back with zeroed fields), so a payload
+  alone proves nothing.
+- `result` — the carrier's raw JSON, unmodified. Shapes differ per carrier.
+- `error` — present only when the request itself failed, never for a simple miss.
+
+### Checking the routing
+
+```bash
+npm run check:routing
+```
+
+Hits both carriers live and asserts the routing rules (correct carrier per prefix,
+input order preserved, no browser launched for a 4PX-only lookup).

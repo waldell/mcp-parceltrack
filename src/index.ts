@@ -5,11 +5,12 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
-import { closeBrowser, trackParcel, trackParcels } from './tracker.js';
+import { closeAll, PROVIDER_NAMES, track } from './router.js';
 
 const InputSchema = z.object({
   trackingId: z.string().min(1).optional(),
   trackingIds: z.array(z.string().min(1)).optional(),
+  provider: z.enum(['yuntrack', '4px']).optional(),
 });
 
 const server = new Server(
@@ -22,7 +23,9 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: 'track_parcel',
       description:
-        'Track one or more parcels via YunTrack. Returns the raw JSON from the YunTrack Query API.',
+        'Track one or more parcels. The carrier is picked automatically from the ' +
+        'tracking number, so the caller does not need to know it. Returns one entry ' +
+        'per tracking number with the raw JSON from the carrier that answered.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -33,7 +36,16 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           trackingIds: {
             type: 'array',
             items: { type: 'string' },
-            description: 'Multiple tracking numbers to look up in parallel (max 3 at a time).',
+            description:
+              'Multiple tracking numbers to look up. They are grouped by carrier and ' +
+              'sent in as few upstream requests as possible.',
+          },
+          provider: {
+            type: 'string',
+            enum: PROVIDER_NAMES,
+            description:
+              'Optional override forcing a specific carrier. Leave this out unless ' +
+              'automatic detection is known to be wrong for these numbers.',
           },
         },
         anyOf: [
@@ -63,7 +75,12 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
     };
   }
 
-  if (!parsed.trackingId && (!parsed.trackingIds || parsed.trackingIds.length === 0)) {
+  const ids = [
+    ...(parsed.trackingId ? [parsed.trackingId] : []),
+    ...(parsed.trackingIds ?? []),
+  ];
+
+  if (ids.length === 0) {
     return {
       isError: true,
       content: [{ type: 'text', text: 'Provide trackingId or trackingIds.' }],
@@ -71,18 +88,10 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
   }
 
   try {
-    if (parsed.trackingIds && parsed.trackingIds.length > 0) {
-      const results = await trackParcels(parsed.trackingIds);
-      return {
-        content: [{ type: 'text', text: JSON.stringify(results, null, 2) }],
-      };
-    } else {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const data = await trackParcel(parsed.trackingId!);
-      return {
-        content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
-      };
-    }
+    const results = await track(ids, { provider: parsed.provider });
+    return {
+      content: [{ type: 'text', text: JSON.stringify(results, null, 2) }],
+    };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return {
@@ -93,7 +102,7 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
 });
 
 async function shutdown(): Promise<void> {
-  await closeBrowser();
+  await closeAll();
   process.exit(0);
 }
 
